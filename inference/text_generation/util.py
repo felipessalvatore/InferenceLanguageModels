@@ -66,6 +66,7 @@ num2word_pt = {
     29: "vinte e nove",
     30: "trinta"}
 
+
 def Rt(x, y):
     return "{} is taller than {}".format(x, y)
 
@@ -165,18 +166,39 @@ def get_n_different_items(item_list, n):
     return new
 
 
-def create_csv(out_path,
-               size,
-               positive_instances_list,
-               negative_instances_list,
-               person_list,
-               place_list,
-               n,
-               min_n=1):
+NLIdict = {"contradiction": 0,
+           "entailment": 1,
+           "neutral": 2}
+
+NLI2CD = {"entailment": 0,
+          "neutral": 0,
+          "contradiction": 1}
+
+
+NLI2RTE = {"entailment": 1,
+           "neutral": 0,
+           "contradiction": 0}
+
+
+def create_csv_binary(out_path,
+                      size,
+                      positive_instances_list,
+                      negative_instances_list,
+                      person_list,
+                      place_list,
+                      n,
+                      min_n,
+                      NLI2dict):
 
     sentence1 = []
     sentence2 = []
     label = []
+    subjects = []
+    objects = []
+    ids = []
+    people = []
+    places = []
+
     positive_examples = int(size / 2)
     negative_examples = int(size / 2)
     positives_len = len(positive_instances_list)
@@ -187,21 +209,141 @@ def create_csv(out_path,
     for i, f in zip(positives, positive_instances_list):
         for _ in range(i):
             current_n = np.random.choice(range(min_n, n + 1))
-            s1, s2, l = f(person_list, place_list, current_n)  # noqa
+            s1, s2, l, s, o, i, pe, pl = f(person_list, place_list, current_n)  # noqa
             sentence1.append(s1)
             sentence2.append(s2)
             label.append(l)
+            subjects.append(s)
+            objects.append(o)
+            ids.append(i)
+            people.append(pe)
+            places.append(pl)
 
     for i, f in zip(positives, negative_instances_list):
         for _ in range(i):
             current_n = np.random.choice(range(min_n, n + 1))
-            s1, s2, l = f(person_list, place_list, current_n)  # noqa
+            s1, s2, l, s, o, i, pe, pl = f(person_list, place_list, current_n)  # noqa
             sentence1.append(s1)
             sentence2.append(s2)
             label.append(l)
+            subjects.append(s)
+            objects.append(o)
+            ids.append(i)
+            people.append(pe)
+            places.append(pl)
+
+    label = list(map(lambda x: NLI2dict[x], label))
 
     df = pd.DataFrame({"sentence1": sentence1,
                        "sentence2": sentence2,
-                       "label": label})
+                       "label": label,
+                       "subjects": subjects,
+                       "objects": objects,
+                       "ids": ids,
+                       "people": people,
+                       "places": places})
+    df = df.sample(frac=1).reset_index(drop=True)
+    df.to_csv(out_path, header=True, index=False)
+
+
+def create_csv_contradiction(out_path,
+                             size,
+                             positive_instances_list,
+                             negative_instances_list,
+                             person_list,
+                             place_list,
+                             n,
+                             min_n):
+
+    create_csv_binary(out_path=out_path,
+                      size=size,
+                      positive_instances_list=positive_instances_list,
+                      negative_instances_list=negative_instances_list,
+                      person_list=person_list,
+                      place_list=place_list,
+                      n=n,
+                      min_n=min_n,
+                      NLI2dict=NLI2CD)
+
+
+def create_csv_entailment(out_path,
+                          size,
+                          positive_instances_list,
+                          negative_instances_list,
+                          person_list,
+                          place_list,
+                          n,
+                          min_n):
+
+    create_csv_binary(out_path=out_path,
+                      size=size,
+                      positive_instances_list=positive_instances_list,
+                      negative_instances_list=negative_instances_list,
+                      person_list=person_list,
+                      place_list=place_list,
+                      n=n,
+                      min_n=min_n,
+                      NLI2dict=NLI2RTE)
+
+
+def create_csv_NLI(out_path,
+                   size,
+                   entailment_instances_list,
+                   neutral_instances_list,
+                   contradiction_instances_list,
+                   person_list,
+                   place_list,
+                   n,
+                   min_n):
+
+    sentence1 = []
+    sentence2 = []
+    label = []
+    subjects = []
+    objects = []
+    ids = []
+    people = []
+    places = []
+
+    entailment_examples = int(size / 3)
+    neutral_examples = int(size / 3)
+    contradiction_examples = int(size / 3)
+
+    entailment_len = len(entailment_instances_list)
+    neutral_len = len(neutral_instances_list)
+    contradiction_len = len(contradiction_instances_list)
+
+    entailments = [int(entailment_examples / entailment_len) for _ in entailment_instances_list]  # noqa
+    neutrals = [int(neutral_examples / neutral_len) for _ in neutral_instances_list]  # noqa
+    contradictions = [int(contradiction_examples / contradiction_len) for _ in contradiction_instances_list]  # noqa
+
+    tuples = [(entailments, entailment_instances_list),
+              (neutrals, neutral_instances_list),
+              (contradictions, contradiction_instances_list)]
+
+    for tuple_ in tuples:
+        for i, f in zip(tuple_[0], tuple_[1]):
+            for _ in range(i):
+                current_n = np.random.choice(range(min_n, n + 1))
+                s1, s2, l, s, o, i, pe, pl = f(person_list, place_list, current_n)  # noqa
+                sentence1.append(s1)
+                sentence2.append(s2)
+                label.append(l)
+                subjects.append(s)
+                objects.append(o)
+                ids.append(i)
+                people.append(pe)
+                places.append(pl)
+
+    label = list(map(lambda x: NLIdict[x], label))
+
+    df = pd.DataFrame({"sentence1": sentence1,
+                       "sentence2": sentence2,
+                       "label": label,
+                       "subjects": subjects,
+                       "objects": objects,
+                       "ids": ids,
+                       "people": people,
+                       "places": places})
     df = df.sample(frac=1).reset_index(drop=True)
     df.to_csv(out_path, header=True, index=False)
