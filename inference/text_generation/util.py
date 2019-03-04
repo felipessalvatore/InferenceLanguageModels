@@ -67,6 +67,14 @@ num2word_pt = {
     30: "trinta"}
 
 
+def rem_definite_article(str_):
+    str_ = str_.split(" ")
+    if len(str_) == 2:
+        return str_[1]
+    else:
+        return str_[0]
+
+
 def Rt(x, y):
     return "{} is taller than {}".format(x, y)
 
