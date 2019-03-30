@@ -11,7 +11,8 @@ data/CD/
 data/RTE/
 data/NLI/
 
-
+#models
+out/
 
 
 # Distribution / packaging
