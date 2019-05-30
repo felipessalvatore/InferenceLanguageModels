@@ -1,2 +1,3 @@
 # InferenceLanguageModels
-if p, then q
+
+Repository with data and experiments regarding inference generation.
